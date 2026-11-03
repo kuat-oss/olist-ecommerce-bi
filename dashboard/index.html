@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olist E-commerce BI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --ink: #1f2328; --muted: #656d76; --line: #e3e6ea;
+    --blue: #2f6fdb; --orange: #e8833a; --green: #3b9c6e; --red: #cf4a3f; --grey: #9aa1ab;
+    --red-bg: #fbe3e1; --green-bg: #dff2e8; --amber-bg: #fbf0d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111318; --card: #1a1d24; --ink: #eceef2; --muted: #9aa1ab; --line: #2a2e37;
+      --red-bg: #4a2422; --green-bg: #1d3a2c; --amber-bg: #3e3419;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111318; --card: #1a1d24; --ink: #eceef2; --muted: #9aa1ab; --line: #2a2e37;
+    --red-bg: #4a2422; --green-bg: #1d3a2c; --amber-bg: #3e3419;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; line-height: 1.45; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+  .chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+  nav { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  nav button.on { color: var(--ink); border-color: var(--blue); font-weight: 600; }
+  .page { display: none; }
+  .page.on { display: block; }
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .kpi .l { font-size: 12px; color: var(--muted); }
+  .kpi .v { font-size: 24px; font-weight: 700; margin-top: 2px; letter-spacing: -0.02em; }
+  .kpi .d { font-size: 12px; margin-top: 2px; color: var(--muted); }
+  .up { color: var(--green); } .down { color: var(--red); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  .card.full { grid-column: 1 / -1; }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .sub { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .note { font-size: 13px; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); }
+  .chart { position: relative; height: 290px; }
+  .tablewrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--card); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .bad { background: var(--red-bg); } .good { background: var(--green-bg); } .warn { background: var(--amber-bg); }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; }
+  .heat td { text-align: center; font-variant-numeric: tabular-nums; }
+  .heat td.n { text-align: right; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpi .v { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Olist marketplace performance</h1>
+      <p>Brazilian e-commerce, ~100k real orders. Values in Brazilian reais (R$).</p>
+    </div>
+    <div class="filters">
+      <label>From <select id="fFrom"></select></label>
+      <label>To <select id="fTo"></select></label>
+      <div class="chips" id="fRegion"></div>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button class="on" data-p="overview">Overview</button>
+    <button data-p="delivery">Delivery &amp; reviews</button>
+    <button data-p="sellers">Sellers</button>
+    <button data-p="customers">Customers</button>
+  </nav>
+
+  <!-- overview -->
+  <section class="page on" id="p-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="card full">
+        <h2>GMV and orders by month</h2>
+        <p class="sub">GMV = item value of orders that weren't canceled or unavailable (freight excluded)</p>
+        <div class="chart"><canvas id="cTrend"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Top 10 categories by GMV</h2>
+        <p class="sub" id="catSub"></p>
+        <div class="chart" style="height:340px"><canvas id="cCat"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>GMV by customer state</h2>
+        <p class="sub">Top 12 states</p>
+        <div class="chart" style="height:340px"><canvas id="cState"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- delivery -->
+  <section class="page" id="p-delivery">
+    <div class="grid">
+      <div class="card full">
+        <h2>Late deliveries and review score by month</h2>
+        <p class="sub">Late = delivered after the date promised at checkout. Target: under 8%.</p>
+        <div class="chart"><canvas id="cLate"></canvas></div>
+        <p class="note" id="lateNote"></p>
+      </div>
+      <div class="card">
+        <h2>Review score by delivery timing</h2>
+        <p class="sub">All delivered and reviewed orders, Jan 2017 - Aug 2018 (not filtered)</p>
+        <div class="chart"><canvas id="cBuckets"></canvas></div>
+        <p class="note" id="bucketNote"></p>
+      </div>
+      <div class="card">
+        <h2>Delivery by state</h2>
+        <p class="sub">Red = late rate above 8%</p>
+        <div class="tablewrap" style="max-height:330px"><table id="tStates"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- sellers -->
+  <section class="page" id="p-sellers">
+    <div class="kpis" id="tierKpis" style="grid-template-columns:repeat(4,1fr)"></div>
+    <div class="grid">
+      <div class="card">
+        <h2>Late rate vs review score</h2>
+        <p class="sub">Sellers with 30+ delivered items. Bubble size = GMV. Not filtered.</p>
+        <div class="chart" style="height:360px"><canvas id="cSellers"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>How tiers are defined</h2>
+        <p class="sub">Rules in dbt/models/marts/mart_seller_scorecard.sql</p>
+        <table>
+          <tr><th>Tier</th><th>Rule</th></tr>
+          <tr><td><span class="badge good">Top</span></td><td>late rate 5% or less and avg review 4.3+</td></tr>
+          <tr><td><span class="badge warn">Standard</span></td><td>everything in between</td></tr>
+          <tr><td><span class="badge bad">At risk</span></td><td>late rate over 15% or avg review under 3.5</td></tr>
+          <tr><td>Too few orders</td><td>under 30 delivered items, not scored</td></tr>
+        </table>
+        <p class="note" id="sellerNote"></p>
+      </div>
+      <div class="card full">
+        <h2>Seller scorecard</h2>
+        <p class="sub">Sorted by GMV. Seller IDs are anonymized in the source data.</p>
+        <div class="chips" id="tierFilter" style="margin-bottom:10px"></div>
+        <div class="tablewrap"><table id="tSellers"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- customers -->
+  <section class="page" id="p-customers">
+    <div class="kpis" id="custKpis" style="grid-template-columns:repeat(4,1fr)"></div>
+    <div class="grid">
+      <div class="card full">
+        <h2>Cohort retention</h2>
+        <p class="sub">Share of each month's new customers who ordered again N months later. Not filtered.</p>
+        <div class="tablewrap" style="max-height:none"><table class="heat" id="tCohort"></table></div>
+        <p class="note" id="cohortNote"></p>
+      </div>
+      <div class="card full">
+        <h2>New customers by month</h2>
+        <p class="sub">First valid order per customer</p>
+        <div class="chart" style="height:260px"><canvas id="cNew"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Data: Olist Brazilian E-Commerce Public Dataset (orders 2016-2018). Modeled in dbt + DuckDB.
+    The analysis window is Jan 2017 - Aug 2018 because the months before and after have very few orders.
+    By Kuat Otarbayev.
+  </footer>
+</div>
+
+<script>
+(function () {
+  const D = window.OLIST;
+  const css = getComputedStyle(document.documentElement);
+  const C = n => css.getPropertyValue(n).trim();
+  Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+  Chart.defaults.color = C("--muted");
+  Chart.defaults.borderColor = C("--line");
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+  const brl = v => "R$" + Math.round(v).toLocaleString("en-US");
+  const brlK = v => v >= 1e6 ? "R$" + (v / 1e6).toFixed(2) + "M" : "R$" + Math.round(v / 1e3).toLocaleString("en-US") + "k";
+  const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+  const num = v => Math.round(v).toLocaleString("en-US");
+  const sum = (a, k) => a.reduce((s, r) => s + (r[k] || 0), 0);
+  const label = m => { const [y, mo] = m.split("-"); return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+mo - 1] + " " + y.slice(2); };
+
+  // ---------- filters ----------
+  const months = [...new Set(D.cube.map(r => r.m))].sort();
+  const regions = ["Southeast", "South", "Northeast", "Center-West", "North"];
+  const fFrom = document.getElementById("fFrom"), fTo = document.getElementById("fTo");
+  months.forEach(m => { fFrom.add(new Option(label(m), m)); fTo.add(new Option(label(m), m)); });
+  fFrom.value = months[0]; fTo.value = months[months.length - 1];
+  let activeRegions = new Set(regions);
+  const chipBox = document.getElementById("fRegion");
+  regions.forEach(r => {
+    const b = document.createElement("button");
+    b.className = "chip on"; b.textContent = r;
+    b.onclick = () => {
+      if (activeRegions.has(r) && activeRegions.size > 1) activeRegions.delete(r); else activeRegions.add(r);
+      b.classList.toggle("on", activeRegions.has(r));
+      render();
+    };
+    chipBox.appendChild(b);
+  });
+  [fFrom, fTo].forEach(s => s.onchange = () => {
+    if (fFrom.value > fTo.value) [fFrom.value, fTo.value] = [fTo.value, fFrom.value];
+    render();
+  });
+  const inRange = (r, from, to) => r.m >= from && r.m <= to && activeRegions.has(r.r);
+
+  // ---------- tabs ----------
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+    document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "p-" + b.dataset.p));
+  });
+
+  // ---------- helpers ----------
+  const charts = {};
+  function draw(id, cfg) {
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id), cfg);
+  }
+  function totals(rows) {
+    const t = {};
+    ["orders","new_cust","gmv","freight","delivered","late","deliv_days","rev_sum","rev_n","bad_n","canceled","all_orders"]
+      .forEach(k => t[k] = sum(rows, k));
+    t.aov = t.gmv / t.orders; t.lateRate = t.late / t.delivered; t.review = t.rev_sum / t.rev_n;
+    t.freightShare = t.freight / t.gmv; t.days = t.deliv_days / t.delivered;
+    return t;
+  }
+  function byMonth(rows, from, to) {
+    return months.filter(m => m >= from && m <= to).map(m => ({ m, ...totals(rows.filter(r => r.m === m)) }));
+  }
+  function delta(cur, prev, higherIsGood = true, asPts = false) {
+    if (prev === null || prev === undefined || !isFinite(prev)) return `<span>no prior period</span>`;
+    const d = asPts ? (cur - prev) * 100 : (cur / prev - 1) * 100;
+    const good = higherIsGood ? d >= 0 : d <= 0;
+    const txt = asPts ? `${d >= 0 ? "+" : ""}${d.toFixed(1)} pts` : `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`;
+    return `<span class="${good ? "up" : "down"}">${txt}</span> vs prior period`;
+  }
+
+  // ---------- render ----------
+  function render() {
+    const from = fFrom.value, to = fTo.value;
+    const rows = D.cube.filter(r => inRange(r, from, to));
+    const t = totals(rows);
+
+    // prior period of the same length
+    const i0 = months.indexOf(from), i1 = months.indexOf(to), len = i1 - i0 + 1;
+    let p = null;
+    if (i0 - len >= 0) {
+      const pf = months[i0 - len], pt = months[i0 - 1];
+      p = totals(D.cube.filter(r => inRange(r, pf, pt)));
+    }
+
+    document.getElementById("kpis").innerHTML = [
+      ["GMV", brlK(t.gmv), delta(t.gmv, p && p.gmv)],
+      ["Orders", num(t.orders), delta(t.orders, p && p.orders)],
+      ["Avg order value", brl(t.aov), delta(t.aov, p && p.aov)],
+      ["Freight % of GMV", pct(t.freightShare), delta(t.freightShare, p && p.freightShare, false, true)],
+      ["Late deliveries", pct(t.lateRate), delta(t.lateRate, p && p.lateRate, false, true)],
+      ["Avg review", t.review.toFixed(2) + " / 5", delta(t.review, p && p.review)],
+    ].map(([l, v, d]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join("");
+
+    const bm = byMonth(rows, from, to);
+    draw("cTrend", {
+      data: {
+        labels: bm.map(r => label(r.m)),
+        datasets: [
+          { type: "bar", label: "GMV", data: bm.map(r => r.gmv), backgroundColor: C("--blue"), borderRadius: 3, yAxisID: "y", order: 2 },
+          { type: "line", label: "Orders", data: bm.map(r => r.orders), borderColor: C("--orange"), backgroundColor: C("--orange"), pointRadius: 2, borderWidth: 2, yAxisID: "y1", order: 1 },
+        ],
+      },
+      options: {
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: { ticks: { callback: brlK } },
+          y1: { position: "right", grid: { display: false }, ticks: { callback: num } },
+        },
+        plugins: { tooltip: { callbacks: { label: c => c.dataset.label === "GMV" ? "GMV: " + brl(c.raw) : "Orders: " + num(c.raw) } } },
+      },
+    });
+
+    // categories
+    const catMap = {};
+    D.categories.filter(r => inRange(r, from, to)).forEach(r => { catMap[r.cat] = (catMap[r.cat] || 0) + r.gmv; });
+    const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+    const catTotal = cats.reduce((s, c) => s + c[1], 0);
+    const top10 = cats.slice(0, 10);
+    document.getElementById("catSub").textContent =
+      `These 10 of ${cats.length} categories make up ${pct(top10.reduce((s, c) => s + c[1], 0) / catTotal, 0)} of GMV`;
+    draw("cCat", {
+      type: "bar",
+      data: { labels: top10.map(c => c[0].replace(/_/g, " ")), datasets: [{ data: top10.map(c => c[1]), backgroundColor: C("--blue"), borderRadius: 3 }] },
+      options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => brl(c.raw) } } },
+        scales: { x: { ticks: { callback: brlK } }, y: { ticks: { autoSkip: false } } } },
+    });
+
+    // states
+    const st = {};
+    D.states.filter(r => inRange(r, from, to)).forEach(r => {
+      const s = st[r.s] || (st[r.s] = { s: r.s, orders: 0, gmv: 0, delivered: 0, late: 0, deliv_days: 0, rev_sum: 0, rev_n: 0 });
+      ["orders","gmv","delivered","late","deliv_days","rev_sum","rev_n"].forEach(k => s[k] += r[k] || 0);
+    });
+    const stArr = Object.values(st).sort((a, b) => b.gmv - a.gmv);
+    const top12 = stArr.slice(0, 12);
+    draw("cState", {
+      type: "bar",
+      data: { labels: top12.map(s => s.s), datasets: [{ data: top12.map(s => s.gmv), backgroundColor: C("--blue"), borderRadius: 3 }] },
+      options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => brl(c.raw) } } },
+        scales: { x: { ticks: { callback: brlK } }, y: { ticks: { autoSkip: false } } } },
+    });
+
+    // delivery tab
+    draw("cLate", {
+      type: "line",
+      data: {
+        labels: bm.map(r => label(r.m)),
+        datasets: [
+          { label: "Late deliveries %", data: bm.map(r => r.lateRate * 100), borderColor: C("--red"), backgroundColor: C("--red"), pointRadius: 2, borderWidth: 2, yAxisID: "y" },
+          { label: "Target 8%", data: bm.map(() => 8), borderColor: C("--grey"), borderDash: [5, 4], pointRadius: 0, borderWidth: 1.5, yAxisID: "y" },
+          { label: "Avg review", data: bm.map(r => r.review), borderColor: C("--blue"), backgroundColor: C("--blue"), pointRadius: 2, borderWidth: 2, yAxisID: "y1" },
+        ],
+      },
+      options: {
+        interaction: { mode: "index", intersect: false },
+        scales: { y: { min: 0, ticks: { callback: v => v + "%" } }, y1: { position: "right", min: 3.5, max: 4.5, grid: { display: false } } },
+        plugins: { tooltip: { callbacks: { label: c => c.dataset.label === "Avg review" ? "Avg review: " + c.raw.toFixed(2) : c.dataset.label + ": " + c.raw.toFixed(1) + "%" } } },
+      },
+    });
+    const worst = bm.reduce((a, b) => (b.lateRate > a.lateRate ? b : a), bm[0]);
+    document.getElementById("lateNote").textContent =
+      `In this selection, the worst month was ${label(worst.m)}: ${pct(worst.lateRate)} of orders arrived late and the average review fell to ${worst.review.toFixed(2)}. ` +
+      `Late rate and review score move in opposite directions almost every month.`;
+
+    document.getElementById("tStates").innerHTML =
+      `<tr><th>State</th><th class="n">Orders</th><th class="n">Avg days</th><th class="n">Late</th><th class="n">Review</th></tr>` +
+      stArr.map(s => {
+        const lr = s.late / s.delivered;
+        return `<tr><td>${s.s}</td><td class="n">${num(s.orders)}</td><td class="n">${(s.deliv_days / s.delivered).toFixed(1)}</td>` +
+          `<td class="n ${lr > 0.08 ? "bad" : ""}">${pct(lr)}</td><td class="n">${(s.rev_sum / s.rev_n).toFixed(2)}</td></tr>`;
+      }).join("");
+
+    // customers tab (filtered parts)
+    const repeatOrders = t.orders - t.new_cust;
+    const ct = Object.fromEntries(D.customerTypes.map(r => [r.customer_type, r]));
+    const totalCust = (ct["One-time"]?.customers || 0) + (ct["Repeat"]?.customers || 0);
+    document.getElementById("custKpis").innerHTML = [
+      ["New customers (selection)", num(t.new_cust)],
+      ["Orders from returning customers", pct(repeatOrders / t.orders)],
+      ["Customers who ever bought twice", pct(ct["Repeat"].customers / totalCust)],
+      ["Avg spend: repeat vs one-time", brl(ct["Repeat"].avg_value) + " vs " + brl(ct["One-time"].avg_value)],
+    ].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:20px">${v}</div></div>`).join("");
+    draw("cNew", {
+      type: "bar",
+      data: { labels: bm.map(r => label(r.m)), datasets: [{ data: bm.map(r => r.new_cust), backgroundColor: C("--green"), borderRadius: 3 }] },
+      options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => num(c.raw) + " new customers" } } } },
+    });
+  }
+
+  // ---------- static sections (not filtered) ----------
+  const B = D.deliveryVsReviews;
+  draw("cBuckets", {
+    type: "bar",
+    data: {
+      labels: B.map(b => b.delivery_bucket.slice(3)),
+      datasets: [{ label: "Avg review", data: B.map(b => b.avg_review),
+        backgroundColor: B.map(b => b.delivery_bucket.includes("late") ? C("--red") : C("--blue")), borderRadius: 3 }],
+    },
+    options: { scales: { y: { min: 1, max: 5 } }, plugins: { legend: { display: false }, tooltip: { callbacks: {
+      label: c => { const b = B[c.dataIndex]; return [`Avg review ${b.avg_review.toFixed(2)}`, `1-2 stars: ${pct(b.bad_review_rate)}`, `${num(b.orders)} orders`]; } } } } },
+  });
+  const early = B.filter(b => !b.delivery_bucket.includes("late"));
+  const vlate = B.find(b => b.delivery_bucket.includes("8+"));
+  document.getElementById("bucketNote").textContent =
+    `Orders that arrived on time or early average ${(sum(early.map(b => ({ v: b.avg_review * b.orders })), "v") / sum(early, "orders")).toFixed(2)} stars. ` +
+    `Orders 8+ days late average ${vlate.avg_review.toFixed(2)}, and ${pct(vlate.bad_review_rate, 0)} of them get 1 or 2 stars.`;
+
+  // sellers
+  const tiers = Object.fromEntries(D.sellerTiers.map(t => [t.tier, t]));
+  document.getElementById("tierKpis").innerHTML = ["Top", "Standard", "At risk", "Too few orders"].map(k => {
+    const t = tiers[k];
+    return `<div class="kpi"><div class="l">${k} sellers</div><div class="v">${num(t.sellers)}</div><div class="d">${pct(t.gmv_share)} of GMV</div></div>`;
+  }).join("");
+  const tierColor = { "Top": C("--green"), "Standard": C("--grey"), "At risk": C("--red") };
+  draw("cSellers", {
+    type: "bubble",
+    data: { datasets: ["Top", "Standard", "At risk"].map(tier => ({
+      label: tier,
+      data: D.sellers.filter(s => s.tier === tier).map(s => ({ x: s.late_rate * 100, y: s.avg_review, r: Math.max(3, Math.sqrt(s.gmv) / 40), s })),
+      backgroundColor: tierColor[tier] + "88", borderColor: tierColor[tier],
+    })) },
+    options: {
+      scales: { x: { title: { display: true, text: "Late deliveries %" }, min: 0 }, y: { title: { display: true, text: "Avg review" }, min: 2, max: 5 } },
+      plugins: { tooltip: { callbacks: { label: c => { const s = c.raw.s; return [`${s.seller_key.slice(0, 8)}... (${s.state_code})`, `GMV ${brl(s.gmv)}`, `Late ${pct(s.late_rate)}, review ${s.avg_review.toFixed(2)}`]; } } } },
+    },
+  });
+  const risk = tiers["At risk"];
+  document.getElementById("sellerNote").textContent =
+    `${risk.sellers} sellers are "at risk". They are only ${pct(risk.gmv_share)} of GMV, so tightening rules for them would cost little revenue.`;
+
+  let tierSel = "All";
+  const tf = document.getElementById("tierFilter");
+  ["All", "Top", "Standard", "At risk"].forEach(k => {
+    const b = document.createElement("button");
+    b.className = "chip" + (k === "All" ? " on" : ""); b.textContent = k;
+    b.onclick = () => { tierSel = k; tf.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === b)); drawSellers(); };
+    tf.appendChild(b);
+  });
+  function drawSellers() {
+    const list = D.sellers.filter(s => tierSel === "All" || s.tier === tierSel).slice(0, 100);
+    const cls = { "Top": "good", "Standard": "warn", "At risk": "bad" };
+    document.getElementById("tSellers").innerHTML =
+      `<tr><th>Seller</th><th>State</th><th class="n">Orders</th><th class="n">GMV</th><th class="n">Late</th><th class="n">Avg review</th><th class="n">1-2 stars</th><th>Tier</th></tr>` +
+      list.map(s => `<tr><td>${s.seller_key.slice(0, 10)}...</td><td>${s.state_code}</td><td class="n">${num(s.orders)}</td><td class="n">${brl(s.gmv)}</td>` +
+        `<td class="n ${s.late_rate > 0.15 ? "bad" : ""}">${pct(s.late_rate)}</td><td class="n ${s.avg_review < 3.5 ? "bad" : ""}">${s.avg_review.toFixed(2)}</td>` +
+        `<td class="n">${pct(s.bad_review_rate)}</td><td><span class="badge ${cls[s.tier]}">${s.tier}</span></td></tr>`).join("");
+  }
+  drawSellers();
+
+  // cohorts
+  const coh = {};
+  D.cohorts.forEach(r => { (coh[r.cohort_month] = coh[r.cohort_month] || {})[r.months_since_first] = r; });
+  const maxN = 6;
+  let html = `<tr><th>First order</th><th class="n">Customers</th>` + Array.from({ length: maxN }, (_, i) => `<th class="n">M${i + 1}</th>`).join("") + `</tr>`;
+  Object.keys(coh).sort().forEach(cm => {
+    const row = coh[cm];
+    html += `<tr><td style="text-align:left">${label(cm.slice(0, 7))}</td><td class="n">${num(row[0].customers)}</td>`;
+    for (let i = 1; i <= maxN; i++) {
+      const r = row[i];
+      if (!r) { html += `<td></td>`; continue; }
+      const a = Math.min(1, r.retention_rate / 0.01);
+      html += `<td style="background:rgba(47,111,219,${(0.08 + a * 0.6).toFixed(2)})">${(r.retention_rate * 100).toFixed(2)}%</td>`;
+    }
+    html += `</tr>`;
+  });
+  document.getElementById("tCohort").innerHTML = html;
+  const m1 = D.cohorts.filter(r => r.months_since_first === 1);
+  const m1avg = sum(m1, "customers") / sum(D.cohorts.filter(r => r.months_since_first === 0 && m1.some(x => x.cohort_month === r.cohort_month)), "customers");
+  document.getElementById("cohortNote").textContent =
+    `Only about ${pct(m1avg, 1)} of new customers order again in the following month. Almost all revenue comes from first-time buyers, so growth depends on acquisition, not loyalty.`;
+
+  render();
+})();
+</script>
+</body>
+</html>
