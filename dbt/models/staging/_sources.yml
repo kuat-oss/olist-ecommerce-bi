@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Olist public e-commerce dataset (Brazil, 2016-2018), gzipped csv files in data/raw.
+    meta:
+      external_location: "../data/raw/{name}.csv.gz"
+    tables:
+      - name: orders
+      - name: order_items
+      - name: order_payments
+      - name: order_reviews
+      - name: products
+      - name: customers
+      - name: sellers
+      - name: category_translation

@@ -1,0 +1,6 @@
+version: 2
+seeds:
+  - name: brazil_states
+    columns:
+      - name: state_code
+        tests: [unique, not_null]
