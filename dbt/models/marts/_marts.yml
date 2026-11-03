@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Calendar table, one row per day.
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+
+  - name: dim_customer
+    description: One row per real customer (customer_unique_id).
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: region
+        tests: [not_null]
+
+  - name: dim_product
+    columns:
+      - name: product_key
+        tests: [unique, not_null]
+
+  - name: dim_seller
+    columns:
+      - name: seller_key
+        tests: [unique, not_null]
+
+  - name: fct_orders
+    description: One row per order.
+    columns:
+      - name: customer_key
+        tests:
+          - relationships:
+              arguments: {to: ref('dim_customer'), field: customer_key}
+      - name: order_id
+        tests: [unique, not_null]
+      - name: date_key
+        tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: delivery_days
+        tests:
+          - within_range: {arguments: {min_value: 0, max_value: 250}}
+
+  - name: fct_order_items
+    description: One row per order item.
+    columns:
+      - name: product_key
+        tests:
+          - relationships:
+              arguments: {to: ref('dim_product'), field: product_key}
+      - name: seller_key
+        tests:
+          - relationships:
+              arguments: {to: ref('dim_seller'), field: seller_key}
+
+  - name: mart_kpi_monthly
+    columns:
+      - name: month_start
+        tests: [unique, not_null]
+      - name: late_rate
+        tests:
+          - within_range: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: mart_delivery_vs_reviews
+  - name: mart_cohort_retention
+  - name: mart_category_performance
+    columns:
+      - name: category
+        tests: [unique]
+  - name: mart_state_performance
+    columns:
+      - name: state_code
+        tests: [unique, not_null]
+  - name: mart_seller_scorecard
+    columns:
+      - name: seller_key
+        tests: [unique, not_null]
