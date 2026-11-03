@@ -1,0 +1,25 @@
+-- grain: one row per order
+select
+    order_id,
+    cast(strftime(order_date, '%Y%m%d') as integer)   as date_key,
+    customer_unique_id                                as customer_key,
+    state_code                                        as customer_state,
+    order_status,
+    is_valid_order,
+    is_delivered,
+    customer_order_number = 1                         as is_first_order,
+    items,
+    sellers,
+    item_value,
+    freight_value,
+    item_value + freight_value                        as order_value,
+    payment_value,
+    main_payment_type,
+    installments,
+    delivery_days,
+    promised_days,
+    days_vs_estimate,
+    is_late,
+    review_score,
+    review_has_comment
+from {{ ref('int_orders') }}
