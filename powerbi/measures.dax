@@ -1,0 +1,143 @@
+// Olist BI measures
+// Paste this whole file into Power BI Desktop > DAX query view, then click
+// "Update model: Add new measures" above the DEFINE block. Run it (F5) to see
+// the check table at the bottom and compare with powerbi/expected_values.md.
+
+DEFINE
+
+    // ---------- sales ----------
+    MEASURE fct_orders[Orders] =
+        CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[is_valid_order] = TRUE () )
+
+    MEASURE fct_orders[GMV] =
+        CALCULATE ( SUM ( fct_orders[item_value] ), fct_orders[is_valid_order] = TRUE () )
+
+    MEASURE fct_orders[Avg Order Value] =
+        DIVIDE ( [GMV], [Orders] )
+
+    MEASURE fct_orders[Freight] =
+        CALCULATE ( SUM ( fct_orders[freight_value] ), fct_orders[is_valid_order] = TRUE () )
+
+    MEASURE fct_orders[Freight % of GMV] =
+        DIVIDE ( [Freight], [GMV] )
+
+    MEASURE fct_orders[Cancel Rate] =
+        DIVIDE (
+            CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[order_status] = "canceled" ),
+            COUNTROWS ( fct_orders )
+        )
+
+    // ---------- time intelligence (dim_date must be marked as date table) ----------
+    MEASURE fct_orders[GMV PM] =
+        CALCULATE ( [GMV], DATEADD ( dim_date[date], -1, MONTH ) )
+
+    MEASURE fct_orders[GMV MoM %] =
+        DIVIDE ( [GMV] - [GMV PM], [GMV PM] )
+
+    MEASURE fct_orders[GMV PY] =
+        CALCULATE ( [GMV], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+    MEASURE fct_orders[GMV YoY %] =
+        DIVIDE ( [GMV] - [GMV PY], [GMV PY] )
+
+    MEASURE fct_orders[GMV YTD] =
+        TOTALYTD ( [GMV], dim_date[date] )
+
+    // ---------- customers ----------
+    MEASURE fct_orders[Active Customers] =
+        CALCULATE ( DISTINCTCOUNT ( fct_orders[customer_key] ), fct_orders[is_valid_order] = TRUE () )
+
+    MEASURE fct_orders[New Customers] =
+        CALCULATE (
+            COUNTROWS ( fct_orders ),
+            fct_orders[is_valid_order] = TRUE (),
+            fct_orders[is_first_order] = TRUE ()
+        )
+
+    MEASURE fct_orders[Repeat Order %] =
+        DIVIDE ( [Orders] - [New Customers], [Orders] )
+
+    // ---------- delivery ----------
+    MEASURE fct_orders[Delivered Orders] =
+        CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[is_delivered] = TRUE () )
+
+    MEASURE fct_orders[Late Orders] =
+        CALCULATE (
+            COUNTROWS ( fct_orders ),
+            fct_orders[is_late] = TRUE (),
+            fct_orders[is_delivered] = TRUE ()
+        )
+
+    MEASURE fct_orders[Late Delivery %] =
+        DIVIDE ( [Late Orders], [Delivered Orders] )
+
+    MEASURE fct_orders[Avg Delivery Days] =
+        CALCULATE ( AVERAGE ( fct_orders[delivery_days] ), fct_orders[is_delivered] = TRUE () )
+
+    MEASURE fct_orders[Avg Promised Days] =
+        CALCULATE ( AVERAGE ( fct_orders[promised_days] ), fct_orders[is_delivered] = TRUE () )
+
+    MEASURE fct_orders[Late Delivery Target] = 0.08
+
+    MEASURE fct_orders[Late Delivery Status] =
+        IF ( [Late Delivery %] > [Late Delivery Target], "Above target", "On target" )
+
+    // ---------- reviews ----------
+    MEASURE fct_orders[Reviewed Orders] =
+        CALCULATE ( COUNTROWS ( fct_orders ), NOT ISBLANK ( fct_orders[review_score] ) )
+
+    MEASURE fct_orders[Avg Review] =
+        AVERAGE ( fct_orders[review_score] )
+
+    MEASURE fct_orders[Bad Review %] =
+        DIVIDE (
+            CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[review_score] <= 2 ),
+            [Reviewed Orders]
+        )
+
+    MEASURE fct_orders[Bad Reviews From Late Orders %] =
+        DIVIDE (
+            CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[review_score] <= 2, fct_orders[is_late] = TRUE () ),
+            CALCULATE ( COUNTROWS ( fct_orders ), fct_orders[review_score] <= 2, fct_orders[is_delivered] = TRUE () )
+        )
+
+    // ---------- item level (sellers, products) ----------
+    MEASURE fct_order_items[Item GMV] =
+        CALCULATE ( SUM ( fct_order_items[price] ), fct_order_items[is_valid_order] = TRUE () )
+
+    MEASURE fct_order_items[Items Sold] =
+        CALCULATE ( COUNTROWS ( fct_order_items ), fct_order_items[is_valid_order] = TRUE () )
+
+    MEASURE fct_order_items[Item Late %] =
+        DIVIDE (
+            CALCULATE (
+                COUNTROWS ( fct_order_items ),
+                fct_order_items[is_late] = TRUE (),
+                fct_order_items[is_delivered] = TRUE ()
+            ),
+            CALCULATE ( COUNTROWS ( fct_order_items ), fct_order_items[is_delivered] = TRUE () )
+        )
+
+    MEASURE fct_order_items[Item Avg Review] =
+        AVERAGE ( fct_order_items[review_score] )
+
+    MEASURE fct_order_items[Category GMV Rank] =
+        RANKX ( ALL ( dim_product[category] ), [Item GMV] )
+
+    MEASURE fct_order_items[Category GMV Share] =
+        DIVIDE ( [Item GMV], CALCULATE ( [Item GMV], ALL ( dim_product[category] ) ) )
+
+    MEASURE fct_order_items[Active Sellers] =
+        CALCULATE ( DISTINCTCOUNT ( fct_order_items[seller_key] ), fct_order_items[is_valid_order] = TRUE () )
+
+// check table: monthly KPIs for the analysis window
+EVALUATE
+SUMMARIZECOLUMNS (
+    dim_date[year_month],
+    FILTER ( ALL ( dim_date[is_in_analysis_window] ), dim_date[is_in_analysis_window] = TRUE () ),
+    "Orders", [Orders],
+    "GMV", ROUND ( [GMV], 2 ),
+    "Late Delivery %", ROUND ( [Late Delivery %], 3 ),
+    "Avg Review", ROUND ( [Avg Review], 3 )
+)
+ORDER BY dim_date[year_month]

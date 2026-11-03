@@ -1,0 +1,10 @@
+{
+  "name": "Olist BI",
+  "dataColors": ["#2F6FDB", "#E8833A", "#3B9C6E", "#CF4A3F", "#8E6BBF", "#6B7785", "#D4A72C", "#2BA3B8"],
+  "background": "#FFFFFF",
+  "foreground": "#1F2328",
+  "tableAccent": "#2F6FDB",
+  "good": "#3B9C6E",
+  "neutral": "#D4A72C",
+  "bad": "#CF4A3F"
+}
